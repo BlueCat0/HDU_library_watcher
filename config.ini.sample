@@ -1,0 +1,7 @@
+[notifier]
+weixin_key =
+mail_host =
+mail_user =
+mail_pass =
+sender =
+receivers =

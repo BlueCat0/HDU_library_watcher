@@ -1,5 +1,8 @@
 [notifier]
+weixin = False
 weixin_key =
+
+mail = False
 mail_host =
 mail_user =
 mail_pass =

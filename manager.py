@@ -1,11 +1,12 @@
 import argparse
-import json
-import storage
 import asyncio
+
 import aiohttp
 import lxml.html
-from book import Book
 from yarl import URL
+
+import storage
+from book import Book
 
 
 async def create_book_main(_add_list):
@@ -41,30 +42,33 @@ def main():
     group.add_argument('-d', '--del', dest='to_del', nargs='+', action='store', help='Del books watched')
     args = parser.parse_args()
 
-    store = storage.load()
-    if args.ls:
-        for book in store:
-            print(book)
+    with storage.FLock():
+        store = storage.load()
+        if args.ls:
+            for book in store:
+                print(book)
 
-    if args.to_add:
-        for marc_no in args.to_add:
-            tmp_book = Book('t', 't', 't', marc_no)
-            if tmp_book in store:
-                args.to_add.remove(marc_no)
-        to_add = set(args.to_add)
-        loop = asyncio.get_event_loop()
-        to_add_books = loop.run_until_complete(create_book_main(to_add))
-        store += to_add_books
-        storage.dump(store)
+        if args.to_add:
+            for marc_no in args.to_add:
+                tmp_book = Book('t', 't', 't', marc_no)
+                if tmp_book in store:
+                    args.to_add.remove(marc_no)
+            to_add = set(args.to_add)
+            loop = asyncio.get_event_loop()
+            to_add_books = loop.run_until_complete(create_book_main(to_add))
+            for book in to_add_books:
+                print(book)
+            store += to_add_books
+            storage.dump(store)
 
-    if args.to_del:
-        for marc_no in args.to_del:
-            tmp_book = Book('t', 't', 't', marc_no)
-            if tmp_book in store:
-                store.remove(tmp_book)
-            else:
-                raise UserWarning('Not Found Book You Want To Del')
-        storage.dump(store)
+        if args.to_del:
+            for marc_no in args.to_del:
+                tmp_book = Book('t', 't', 't', marc_no)
+                if tmp_book in store:
+                    store.remove(tmp_book)
+                else:
+                    raise UserWarning('Not Found Book You Want To Del')
+            storage.dump(store)
 
 
 

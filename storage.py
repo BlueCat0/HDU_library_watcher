@@ -1,13 +1,14 @@
+import configparser
 import json
 import os
 import time
+
 from book import Book
-import configparser
 
 path = 'book.json'
 
 
-class myConfigParser(configparser.ConfigParser):
+class MyConfigParser(configparser.ConfigParser):
     def __init__(self, defaults=None):
         configparser.ConfigParser.__init__(self, defaults=defaults)
 
@@ -24,7 +25,8 @@ class FLock:
             while True:
                 if not os.path.exists('LOCK'):
                     break
-                print('wait')
+                print('wait for lock')
+                time.sleep(1)
         else:
             if os.path.exists('LOCK'):
                 raise BlockingIOError
@@ -35,16 +37,14 @@ class FLock:
 
 
 def dump(store):
-    with FLock():
-        with open(path, 'w') as f:
-            json.dump(store, f, default=Book.serialize)
+    with open(path, 'w') as f:
+        json.dump(store, f, default=Book.serialize)
 
 
 def load():
-    with FLock():
-        try:
-            with open(path, 'r') as f:
-                store = json.load(f, object_hook=Book.deserialization)
-        except FileNotFoundError:
-            store = []
+    try:
+        with open(path, 'r') as f:
+            store = json.load(f, object_hook=Book.deserialization)
+    except FileNotFoundError:
+        store = []
     return store

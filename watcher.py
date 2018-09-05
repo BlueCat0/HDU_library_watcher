@@ -1,63 +1,83 @@
-import aiohttp
 import asyncio
-from yarl import URL
-from book import Book
-import storage
+
+import aiohttp
 import lxml.html
+
+import logger as _logger
 import notifier
+import storage
+from book import Book
+
+logger = _logger.logger
 
 notifier = notifier.notifier
 
 
-async def fetch(session: aiohttp.ClientSession, marc_no):
-    url = URL('http://210.32.33.91:8080/opac/ajax_item.php').with_query({'marc_no': marc_no})
-    async with session.get(url) as response:
-        html = await response.text()
-    return parse_html(html)
+async def fetch(session: aiohttp.ClientSession, book: Book):
+    async with session.get(book.get_ajax_page_url()) as response:
+        try:
+            html = await response.text()
+        except Exception as e:
+            logger.warning('Unable to access web-page of {}'.format(book), exc_info=True)
+            raise e
+        else:
+            logger.debug('Access {} page success \n {}'.format(book, html))
+            parse_result = parse_html(html, book)
+            return parse_result
 
 
-def parse_html(html):
+def parse_html(html, book: Book):
     dom = lxml.html.fromstring(html)
-    state_list = dom.xpath('//*[@id="item"]/tr/td[5]/text()')
-    return '可借' in state_list
+    state_list = dom.xpath('//*[@id="item"]/tr/td[5]/font/text() | //*[@id="item"]/tr/td[5]/text()')
+    state = '可借' not in state_list
 
-
-def notify(book: Book):
-    text = '《{title}》处于{borrowed}状态'.format(title=book.title, borrowed='借出' if book.borrowed else '可借')
-    print(text)
-    notifier.collect_notify(text)
+    logger.debug('Parse {} result is {} {}'.format(book, state, state_list))
+    return state
 
 
 async def add_success_callback(book, callback):
-    un_borrowed = await callback
-    if book.borrowed == un_borrowed:
-        if un_borrowed:
-            book.borrowed = False
-        else:
-            book.borrowed = True
-        notify(book)
+    borrowed = await callback
+    if book.borrowed != borrowed:
+        logger.info('{} borrow state change'.format(book))
+        book.borrowed = borrowed
+        notifier.collect_notify(book)
+
+    else:
+        logger.debug('{} borrow state not change'.format(book))
 
 
 async def main():
+    logger.info('Watcher start')
+
     session = aiohttp.ClientSession()
     try:
         while True:
-            print('Checking...')
+            logger.info('Checking...')
 
-            store = storage.load()
-            futures = []
-            for book in store:
-                future = fetch(session, book.marc_no)
-                future = add_success_callback(book, future)
-                futures.append(future)
-            await asyncio.gather(*futures)
-            storage.dump(store)
+            with storage.FLock():
+                store = storage.load()
+                logger.debug('Load {} stored book'.format(len(store)))
+
+                futures = []
+                for book in store:
+                    future = fetch(session, book)
+                    future = add_success_callback(book, future)
+                    futures.append(future)
+                await asyncio.gather(*futures)
+
+                storage.dump(store)
+                logger.debug('Store {} books to file'.format(len(store)))
             notifier.send_notify()
 
-            print('Waiting...')
-            await asyncio.sleep(600)
+            logger.info('Wait for 1800s')
+            await asyncio.sleep(1800)
+    except Exception as e:
+        logger.error('Watcher occurs error', exc_info=True)
+        raise e
+
     finally:
         session.close()
+        logger.info('Watcher stop')
 
 
 loop = asyncio.get_event_loop()

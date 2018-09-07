@@ -1,42 +1,34 @@
 import asyncio
+import logging
 import smtplib
+from collections import namedtuple
 from email.mime.text import MIMEText
 
 import aiohttp
 from yarl import URL
 
-import logger as _logger
 from book import Book
-from storage import MyConfigParser
 
-logger = _logger.logger
-
-cf = MyConfigParser()
-cf.read('config.ini')
-
-weixin = cf.getboolean('notifier', 'weixin')
-weixin_key = cf.get('notifier', 'weixin_key')
-
-mail = cf.getboolean('notifier', 'mail')
-mail_host = cf.get('notifier', 'mail_host')
-mail_user = cf.get('notifier', 'mail_user')
-mail_pass = cf.get('notifier', 'mail_pass')
-sender = cf.get('notifier', 'sender')
-receivers = cf.get('notifier', 'receivers')
-
-if weixin:
-    logger.info('Init WeiXin notify')
-
-if mail:
-    logger.info('Init Mail notify')
+weixin = namedtuple('weixin', ['key'])
+mail = namedtuple('mail', ['host', 'username', 'password', 'sender', 'receiver'])
 
 
 class Notifier:
-    def __init__(self):
-        self.notify = []  # type: [Book]
+    def __init__(self, _weixin: weixin = None, _mail: mail = None,
+                 logger: logging.Logger = logging.getLogger('Watcher.Notifier')):
+        self.notify_list = []  # type: [Book]
+
+        self.logger = logger
+        self._weixin = _weixin
+        if self._weixin:
+            self.logger.info('WeiXin notify init')
+
+        self._mail = _mail
+        if self._mail:
+            self.logger.info('Mail notify init')
 
     def collect_notify(self, book: Book):
-        self.notify.append(book)
+        self.notify_list.append(book)
 
     @staticmethod
     def generate_mail_content(books):
@@ -50,35 +42,32 @@ class Notifier:
         yield '</table>'
 
     def send_notify(self):
-        if not self.notify:
+        if not self.notify_list:
             return
-        if mail:
+        if self._mail:
             self.send_notify_mail()
-        if weixin:
+        if self._weixin:
             self.send_notify_weixin()
-        self.notify = []
+        self.notify_list = []
 
     def send_notify_mail(self):
-        if not mail_user and not mail_pass:
-            raise UserWarning('Not Set Mail')
-        content = ''.join(self.generate_mail_content(self.notify))
+        content = ''.join(self.generate_mail_content(self.notify_list))
         message = MIMEText(content, 'html', 'utf-8')
         message['Subject'] = '书籍监控变动'
-        message['From'] = sender
-        message['To'] = receivers[0]
+        message['From'] = self._mail.sender
+        message['To'] = self._mail.receiver
 
         try:
-            smtp_obj = smtplib.SMTP()
-            smtp_obj.connect(mail_host, 25)
-            smtp_obj.login(mail_user, mail_pass)
+            smtp_obj = smtplib.SMTP_SSL(self._mail.host, 465)
+            smtp_obj.login(self._mail.username, self._mail.password)
             smtp_obj.sendmail(
-                sender, receivers, message.as_string())
+                self._mail.sender, self._mail.receiver, message.as_string())
             smtp_obj.quit()
-            logger.info('Mail Send Success, notify {} changes'.format(len(self.notify)))
-            logger.debug('Mail Content is %s', content)
+            self.logger.info('Mail notify send success')
+            self.logger.debug('Mail content is %s', content)
 
-        except smtplib.SMTPException:
-            logger.warning('Mail Send Error', exc_info=True)
+        except smtplib.SMTPException and TimeoutError:
+            self.logger.warning('Mail notify send error', exc_info=True)
 
     @staticmethod
     def generate_weixin_resp(books: [Book]):
@@ -90,13 +79,10 @@ class Notifier:
                                                         book.get_detail_page_url())
 
     def send_notify_weixin(self):
-        if not weixin_key:
-            raise UserWarning('Not Set Weixin')
-
         session = aiohttp.ClientSession()
 
         async def send(text, desp=None):
-            url = URL('https://sc.ftqq.com/{weixin_key}.send'.format(weixin_key=weixin_key))
+            url = URL('https://sc.ftqq.com/{weixin_key}.send'.format(weixin_key=self._weixin.key))
             data = {
                 'text': text,
                 'desp': desp
@@ -107,21 +93,18 @@ class Notifier:
                     raise ConnectionError('WeiXin Send Error', json)
 
         task = send(
-            text='{}本书籍监控变动'.format(len(self.notify)),
-            desp=''.join(self.generate_weixin_resp(self.notify))
+            text='{}本书籍监控变动'.format(len(self.notify_list)),
+            desp=''.join(self.generate_weixin_resp(self.notify_list))
         )
 
         async def send_main():
             try:
                 await asyncio.gather(task)
             except ConnectionError:
-                logger.error('WeiXin Send Error', exc_info=True)
+                self.logger.error('WeiXin Send Error', exc_info=True)
             else:
-                logger.info('WeiXin Send Success')
+                self.logger.info('WeiXin Send Success')
             await session.close()
 
         loop = asyncio.get_event_loop()
         loop.create_task(send_main())
-
-
-notifier = Notifier()

@@ -2,7 +2,9 @@ version: "3"
 
 services:
   hdu_library_watcher:
-    image: hdu_library_watcher_dev:latest
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    image: hdu_library_watcher:latest
     working_dir: /root/HDU_library_watcher
-    command: python3 -u watcher.py
     restart: on-failure

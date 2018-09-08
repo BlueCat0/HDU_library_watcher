@@ -12,6 +12,9 @@ ENV LANG="en_US.UTF-8" \
 RUN rm /etc/apt/sources.list
 COPY sources.list /etc/apt/sources.list
 
+RUN echo "Asia/Shanghai" > /etc/timezone
+RUN dpkg-reconfigure -f noninteractive tzdata
+
 RUN apt -qq update && \
     apt -qq upgrade -y && \
     apt -qq autoremove -y && \

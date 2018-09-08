@@ -7,13 +7,12 @@ import aiohttp
 import aiosmtplib
 from yarl import URL
 
-from src.hdu_library_watcher.book import Book
-
-Weixin = namedtuple('weixin', ['key'])
-Mail = namedtuple('mail', ['host', 'username', 'password', 'sender', 'receiver'])
+from .book import Book
 
 
 class Notifier:
+    Weixin = namedtuple('weixin', ['key'])
+    Mail = namedtuple('mail', ['host', 'username', 'password', 'sender', 'receiver'])
     Notify = namedtuple('notify', ['book', 'message'])
 
     def __init__(self, weixin: Weixin = None, mail: Mail = None,
@@ -31,6 +30,14 @@ class Notifier:
 
     def collect_notify(self, book: Book, message):
         self.notify_list.append(self.Notify(book, message))
+
+    async def send_all_status(self, books: [Book]):
+        self.logger.debug('Send all status')
+        _loop = asyncio.get_event_loop()
+        if self._mail:
+            _loop.create_task(self.send_notify_mail(books))
+        if self._weixin:
+            _loop.create_task(self.send_notify_weixin(books))
 
     async def send_notify(self):
         self.logger.debug('Notify list {}'.format(self.notify_list))
@@ -73,7 +80,7 @@ class Notifier:
             self.logger.warning('Mail notify send error', exc_info=True)
 
         else:
-            self.logger.info('Mail notify send success')
+            self.logger.debug('Mail notify send success')
 
     @staticmethod
     def generate_weixin_resp(notify_list: [Notify]):
@@ -100,4 +107,4 @@ class Notifier:
                 except ConnectionError:
                     self.logger.error('WeiXin notify send error', exc_info=True)
                 else:
-                    self.logger.info('WeiXin notify send success')
+                    self.logger.debug('WeiXin notify send success')

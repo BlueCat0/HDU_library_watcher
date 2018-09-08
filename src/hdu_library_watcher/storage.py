@@ -3,7 +3,7 @@ import os
 import time
 import typing
 
-from src.hdu_library_watcher.book import Book
+from .book import Book
 
 path = 'book.json'
 

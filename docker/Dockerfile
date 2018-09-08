@@ -11,7 +11,6 @@ ENV LANG="en_US.UTF-8" \
 
 RUN rm /etc/apt/sources.list
 COPY sources.list /etc/apt/sources.list
-COPY pip.conf /root/.pip/pip.conf
 
 RUN apt update -qq && \
     apt upgrade -y -qq && \

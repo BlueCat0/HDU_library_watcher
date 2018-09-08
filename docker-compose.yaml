@@ -6,5 +6,5 @@ services:
       context: ./docker
       dockerfile: Dockerfile
     image: hdu_library_watcher:latest
-    working_dir: /root/HDU_library_watcher
+#    command:
     restart: on-failure

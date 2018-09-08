@@ -2,6 +2,7 @@ import configparser
 import json
 import os
 import time
+import typing
 
 from book import Book
 
@@ -36,15 +37,15 @@ class FLock:
         os.remove('LOCK')
 
 
-def dump(store):
+def dump(store: typing.Dict[str, 'Book']):
     with open(path, 'w') as f:
         json.dump(store, f, default=Book.serialize)
 
 
-def load():
+def load() -> typing.Dict[str, 'Book']:
     try:
         with open(path, 'r') as f:
             store = json.load(f, object_hook=Book.deserialization)
     except FileNotFoundError:
-        store = []
+        store = {}
     return store

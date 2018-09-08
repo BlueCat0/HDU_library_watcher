@@ -16,12 +16,11 @@ COPY pip.conf /root/.pip/pip.conf
 RUN apt update -qq && \
     apt upgrade -y -qq && \
     apt autoremove -y -qq && \
-    apt install python3 python3-pip git vim -y -qq && \
-    pip3 install aiohttp lxml -q
+    apt install python3 python3-pip git vim -y -qq
 
 ADD https://api.github.com/repos/${GIT_USER}/${GIT_REPO}/git/refs/heads/${GIT_BRANCE} version.json
 RUN git clone -b${GIT_BRANCE} https://github.com/{$GIT_USER}/{$GIT_REPO}.git ${GIT_HOME}/
 WORKDIR ${GIT_HOME}
-COPY config.ini ./config.ini
+RUN pip3 install -r requirements.txt
 
 ENTRYPOINT ["python3", "-u", "watcher.py"]

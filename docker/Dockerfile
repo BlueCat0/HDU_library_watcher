@@ -15,11 +15,11 @@ COPY sources.list /etc/apt/sources.list
 RUN apt -qq update && \
     apt -qq upgrade -y && \
     apt -qq autoremove -y && \
-    apt -qq install python3 python3-pip git vim tzdata -y
+    apt -qq install python3 python3-pip git vim -y
 
 ADD https://api.github.com/repos/$GIT_USER/$GIT_REPO/git/refs/heads/$GIT_BRANCE version.json
 RUN git clone -b$GIT_BRANCE https://github.com/$GIT_USER/$GIT_REPO.git $GIT_HOME/
 WORKDIR $GIT_HOME/src/hdu_library_watcher
 RUN pip3 install -r requirements.txt
 
-ENTRYPOINT ["python3", "-u", "-m", "watcher.py"]
+ENTRYPOINT ["python3", "-u", "-m", "src.hdu_library_watcher"]

@@ -15,8 +15,8 @@ COPY sources.list /etc/apt/sources.list
 RUN apt -qq update && \
     apt -qq upgrade -y && \
     apt -qq autoremove -y && \
-    apt -qq install python3 python3-pip git vim tzdata -y \
-    echo "Asia/Shanghai" > /etc/timezone \
+    apt -qq install python3 python3-pip git vim tzdata -y && \
+    echo "Asia/Shanghai" > /etc/timezone && \
     dpkg-reconfigure -f noninteractive tzdata
 
 ADD https://api.github.com/repos/$GIT_USER/$GIT_REPO/git/refs/heads/$GIT_BRANCE version.json

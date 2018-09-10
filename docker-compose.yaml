@@ -6,5 +6,7 @@ services:
       context: ./docker
       dockerfile: Dockerfile
     image: hdu_library_watcher:latest
+    volumes:
+      - "/etc/localtime:/etc/localtime"
 #    command:
     restart: on-failure

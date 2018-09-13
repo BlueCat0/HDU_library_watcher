@@ -74,15 +74,15 @@ class Watcher:
                 self.logger.debug('Parse {} result is {} {}'.format(marc_no, state, state_list))
                 return state
 
-    async def send_all_status_loop(self, store_books: typing.Dict[str, 'Book']):
+    async def send_all_status_loop(self):
+        store_books = storage.load()
         self.logger.debug('Send All Status')
         books = [Notifier.Notify(book, None) for book in store_books.values()]
         await self.notifier.send_all_status(books)
         for _ in range(0, 1):
             for _ in range(0, 24):
                 await asyncio.sleep(3600)
-
-        asyncio.get_event_loop().create_task(self.send_all_status_loop(store_books))
+        asyncio.get_event_loop().create_task(self.send_all_status_loop())
 
     async def check_loop(self, shelf: str, loop_time: int = 3600):
         self.logger.info('-----------------------')
@@ -124,9 +124,6 @@ class Watcher:
                         self.logger.debug('Store {} books to file'.format(len(store_books.values())))
 
                     await self.notifier.send_notify()
-
-                    # 每天定时发送所有追踪的书的详情
-                    asyncio.get_event_loop().create_task(self.send_all_status_loop(store_books))
 
                 except TimeoutError:
                     self.logger.error('Watcher occurs error', exc_info=True)
@@ -201,6 +198,7 @@ def main():
     notifier = Notifier(mail=args_tuple.mail, weixin=args_tuple.weixin)
     watcher = Watcher(notifier, logger)
     loop = asyncio.get_event_loop()
+    loop.create_task(watcher.send_all_status_loop())
     loop.run_until_complete(watcher.check_loop(shelf=args_tuple.shelf_number, loop_time=args_tuple.loop_time))
 
 

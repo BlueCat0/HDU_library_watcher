@@ -75,12 +75,12 @@ class Watcher:
                 return state
 
     async def send_all_status_loop(self, store_books: typing.Dict[str, 'Book']):
+        books = [book for book in store_books.values()]
+        await self.notifier.send_all_status(books)
         for _ in range(0, 1):
             for _ in range(0, 24):
                 await asyncio.sleep(3600)
 
-        books = [book for book in store_books.values()]
-        self.notifier.send_all_status(books)
         asyncio.get_event_loop().create_task(self.send_all_status_loop(store_books))
 
     async def check_loop(self, shelf: str, loop_time: int = 3600):

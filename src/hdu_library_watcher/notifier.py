@@ -89,7 +89,7 @@ class Notifier:
         yield '| 状态 | 书籍 | 链接 |\n'
         yield '| ---- | ---- | ---- |\n'
         for notify in notify_list:
-            yield '| **{}** | {} | [链接]({}) |\n'.format(notify.message or notify.book.can_be_borrowed(),
+            yield '| **{}** | {} | [链接]({}) |\n'.format(notify.message or notify.book.get_state(),
                                                         notify.book,
                                                         notify.book.get_detail_page_url())
 

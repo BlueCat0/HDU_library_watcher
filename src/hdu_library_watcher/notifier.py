@@ -32,7 +32,9 @@ class Notifier:
         self.notify_list.append(self.Notify(book, message))
 
     async def send_all_status(self, books: [Book]):
-        self.logger.debug('Send all status')
+        if not books:
+            return
+        self.logger.debug('Send all status: {}'.format(books))
         _loop = asyncio.get_event_loop()
         if self._mail:
             _loop.create_task(self.send_notify_mail(books))

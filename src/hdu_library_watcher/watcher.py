@@ -75,7 +75,8 @@ class Watcher:
                 return state
 
     async def send_all_status_loop(self, store_books: typing.Dict[str, 'Book']):
-        books = [book for book in store_books.values()]
+        self.logger.debug('Send All Status')
+        books = [Notifier.Notify(book, None) for book in store_books.values()]
         await self.notifier.send_all_status(books)
         for _ in range(0, 1):
             for _ in range(0, 24):
@@ -91,7 +92,7 @@ class Watcher:
         try:
             while True:
                 try:
-                    self.logger.info('Checking...')
+                    self.logger.debug('Checking...')
 
                     books = await self.get_shelf_books(session, shelf)  # type: typing.Dict[str, 'Book']
                     self.logger.debug('Get {} shelf books'.format(len(books)))
@@ -103,18 +104,18 @@ class Watcher:
                         for call_no, store_book in store_books.items():
                             if store_book not in books.values():
                                 self.logger.info('Stop track {}'.format(store_book))
-                                # notifier.collect_notify(store_book, '停止追踪')
+                                # self.notifier.collect_notify(store_book, '停止追踪')
                                 del store_books[call_no]
 
                         for call_no, book in books.items():
                             if book not in store_books.values():
                                 self.logger.info('Begin track {}'.format(book))
-                                # notifier.collect_notify(book, '开始追踪')
+                                self.notifier.collect_notify(book, '开始追踪')
                                 store_books[call_no] = book
                             else:
                                 if book.state != store_books.get(call_no).state:
                                     self.logger.info('Tracked book {} state change'.format(book))
-                                    self.notifier.collect_notify(book, None)
+                                    # self.notifier.collect_notify(book, None)
                                     store_books[call_no] = book
                                 else:
                                     self.logger.debug('Tracked book {} state not change'.format(book))
@@ -135,7 +136,7 @@ class Watcher:
                     raise e
 
                 finally:
-                    self.logger.info('Wait for {}s'.format(loop_time))
+                    self.logger.debug('Wait for {}s'.format(loop_time))
                     await asyncio.sleep(loop_time)
 
         finally:

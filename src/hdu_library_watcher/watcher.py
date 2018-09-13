@@ -110,12 +110,12 @@ class Watcher:
                         for call_no, book in books.items():
                             if book not in store_books.values():
                                 self.logger.info('Begin track {}'.format(book))
-                                self.notifier.collect_notify(book, '开始追踪')
+                                # self.notifier.collect_notify(book, '开始追踪')
                                 store_books[call_no] = book
                             else:
                                 if book.state != store_books.get(call_no).state:
                                     self.logger.info('Tracked book {} state change'.format(book))
-                                    # self.notifier.collect_notify(book, None)
+                                    self.notifier.collect_notify(book, None)
                                     store_books[call_no] = book
                                 else:
                                     self.logger.debug('Tracked book {} state not change'.format(book))

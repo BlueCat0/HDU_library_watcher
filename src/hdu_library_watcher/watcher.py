@@ -101,11 +101,15 @@ class Watcher:
                         store_books = storage.load()  # type: typing.Dict[str, 'Book']
                         self.logger.debug('Load {} stored books'.format(len(store_books)))
 
+                        del_key_list = []
                         for call_no, store_book in store_books.items():
                             if store_book not in books.values():
                                 self.logger.info('Stop track {}'.format(store_book))
                                 # self.notifier.collect_notify(store_book, '停止追踪')
-                                del store_books[call_no]
+                                del_key_list.append(call_no)
+
+                        for del_key in del_key_list:
+                            del store_books[del_key]
 
                         for call_no, book in books.items():
                             if book not in store_books.values():

@@ -74,14 +74,15 @@ class Watcher:
                 self.logger.debug('Parse {} result is {} {}'.format(marc_no, state, state_list))
                 return state
 
-    async def send_all_status_loop(self):
+    async def send_all_status_loop(self, loop_time=7 * 24 * 3600):
+        remain_time = loop_time
+        while remain_time >= 3600:
+            remain_time = remain_time - 3600
+            await asyncio.sleep(3600)
         store_books = storage.load()
         self.logger.debug('Send All Status')
         books = [Notifier.Notify(book, None) for book in store_books.values()]
         await self.notifier.send_all_status(books)
-        for _ in range(0, 1):
-            for _ in range(0, 24):
-                await asyncio.sleep(3600)
         asyncio.get_event_loop().create_task(self.send_all_status_loop())
 
     async def check_loop(self, shelf: str, loop_time: int = 3600):
